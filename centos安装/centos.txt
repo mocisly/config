@@ -1,0 +1,25 @@
+# USE AT YOUR OWN RISK
+
+sudo yum install -y libXft-devel libXinerama-devel fontpackages-devel #dwm prerequisites
+sudo yum install -y git gcc gdb vim #dev tools
+
+sudo yum groupinstall -y "X Window System"
+sudo yum install -y  open-vm-tools 
+
+
+
+
+git clone https://git.suckless.org/dwm
+
+cd dwm
+
+make
+sudo make clean install
+
+cp /etc/X11/xinit/.xinitrc  /home/epiphyllum/.xinitrc
+
+vim .xinitrc
+exec dwm
+
+
+sudo reboot

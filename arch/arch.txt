@@ -1,0 +1,279 @@
+停止reflector服务 禁止自动更新服务器列表
+systemctl stop reflector.service
+
+同步网络时间
+timedatectl set-ntp true
+
+修改软件源 把中国的服务器排在前列
+vi /etc/pacman.d/mirrorlist
+
+pacman -Syyu刷新但是不要更新软件包
+pacman -S net-tools openssh安装这两个软件
+echo "PermitRootLogin yes" >> "/etc/ssh/sshd_config"    #修改配置表
+echo "PasswordAuthentication yes" >> "/etc/ssh/sshd_config"    #修改配置表
+
+systemctl start sshd启用sshd服务
+
+passwd设置当前账户的密码
+
+ifconfig查看ip地址 或者ip a也可以
+
+新建SSH会话 填入之前查看的ip地址和账户名root 输入密码即可连接成功
+
+之后的步骤都可以在SSH上完成 不用繁琐的敲命令 可以复制粘贴
+
+fdisk -l 查看磁盘列表
+fdisk /dev/sda
+
+格式化sda磁盘
+
+g 创建一个gpt分区
+
+n   空  空  2G
+n    4  空  2G
+n    空  空 +45G
+n    空  空   空
+p          w
+
+分区
+
+mkfs.ext4 /dev/sda2
+mkfs.ext4 /dev/sda3
+mkfs.vfat /dev/sda1
+mkswap /dev/sda4
+swapon /dev/sda4
+
+我分了四个区
+根据自己硬件修改 
+
+挂载
+
+mount /dev/sda2 /mnt
+mkdir /mnt/home
+mkdir /mnt/boot
+mount /dev/sda3 /mnt/home
+mount /dev/sda1 /mnt/boot
+
+往/mnt目录里安装系统
+
+其中最基础的四个base base-devel linux linux-firmware
+
+pacstrap /mnt base base-devel linux linux-firmware dhcpcd iwd sudo bash net-tools openssh man vi 
+
+生成fstab
+genfstab -U /mnt >> /mnt/etc/fstab
+
+查看
+cat /mnt/etc/fstab
+
+切换到刚安装的系统内
+arch-chroot /mnt
+
+编辑aur中国源(可选项)
+vi /etc/pacman.conf
+
+删除[multilib]和下面一行的＃
+[archlinuxcn]
+Server = https://mirrors.ustc.edu.cn/archlinuxcn/$arch
+Server = http://mirrors.163.com/archlinux-cn/$arch
+pacman -Syyu
+
+编辑hostname 名字自行取名 如Mocisly
+
+vi /etc/hostname
+Mocisly
+
+编辑hosts 我这里的名字是arch可自行更改
+vi /etc/hosts 
+
+内容如下
+127.0.0.1   localhost
+::1         localhost
+127.0.1.1   Mocisly.localdomain    Mocisly
+
+设置时区
+ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+
+硬件时间设置
+hwclock --systohc
+
+编辑语言环境
+vi /etc/locale.gen
+
+把en_US.UTF-8  zh_CN.UTF-8前面的#号删除
+locale-gen
+
+使刚才的语言环境生效
+echo 'LANG=en_US.UTF-8'  > /etc/locale.conf
+
+往/etc目录下的locale.conf文件里写入如下内容
+
+LANG=en_US.UTF-8
+
+相当于vi /etc/locale.conf
+里面输入LANG=en_US.UTF-8
+
+新建账户名为epiphyllum可自行更改用户名
+useradd -m -G wheel -s /bin/bash epiphyllum
+
+
+设置epiphyllum账户名的密码
+passwd epiphyllum
+
+
+编辑arch账户的权限
+EDITOR=vi visudo
+
+删除%
+%wheel ALL=(ALL:ALL) ALL
+
+安装 cpu微码和引导软件
+pacman -S intel-ucode grub efibootmgr
+//如果是amd 则输入amd-ucode
+
+
+
+安装grub引导
+grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
+
+生成grub
+
+grub-mkconfig -o /boot/grub/grub.cfg
+
+安装 浏览器 字体等软件包
+
+pacman -S gdb make wget python-pip chromium neofetch net-tools openssh networkmanager ntfs-3g  dia zathura zathura-pdf-poppler  ffmpeg vlc unzip xf86-video-qxl  xf86-video-intel xorg xorg-xinit adobe-source-han-serif-cn-fonts adobe-source-code-pro-fonts adobe-source-han-sans-cn-fonts wqy-zenhei wqy-microhei wqy-bitmapfont wqy-microhei-lite noto-fonts-cjk  noto-fonts-extra  qemu-full 
+
+开机启动 网络管理 ssh  注意大小写
+
+systemctl enable NetworkManager sshd
+
+运行以下命令
+mkinitcpio -p linux
+
+
+退出
+exit
+
+
+
+卸载/mnt目录
+umount -R /mnt
+
+
+重启
+reboot
+
+
+安装aur  yay 前提是开启aur中国源vi /etc/pacman.conf
+
+sudo pacman -S archlinuxcn-keyring
+sudo pacman -Syu haveged
+sudo systemctl start haveged
+sudo systemctl enable haveged
+sudo rm -rf /etc/pacman.d/gnupg
+sudo pacman-key --init
+sudo pacman-key --populate archlinux
+sudo pacman-key --populate archlinuxcn
+sudo pacman -S archlinuxcn-keyring
+
+
+sudo vi /root/.bashrc
+export LANGUAGE="en_US.UTF-8"
+export LANG=en_US:zh_CN.UTF-8
+export LC_ALL=C
+
+
+sudo pacman -S yay
+yay -S netease-cloud-music
+
+#声音shell
+sudo pacman -S alsa-utils 
+alsamixer
+
+
+
+sudo pacman -S xf86-video-qxl  xf86-video-intel xorg xorg-xinit 
+
+
+cp /etc/X11/xinit/xinitrc  .xinitrc
+vi .xinitrc
+删除后五行
+
+mkdir suckless
+
+cd suckless
+
+git clone https://git.suckless.org/dwm 
+
+vi config.mk
+# 修改 config.mk 文件
+X11INC = /usr/X11R6/include               X11INC = /usr/include/X11
+X11LIB = /usr/X11R6/lib                   X11LIB = /usr/lib/X11
+
+# 进入dwm目录
+cd dwm
+
+# 编译安装
+sudo make clean install
+
+
+#相同操作
+git clone https://git.suckless.org/st
+
+anysize   去除下面黑边
+scrollback  翻页
+hidecursor  打字去除鼠标
+
+patch < hidecusor 这个补丁之后
+vi config.h
+
+在 static Key key[] = {}最下面添加
+
+{ MODKEY,               XK_u,           kscrollup,      {.i =  1} },
+{ MODKEY,               XK_e,           kscrolldown,    {.i =  1} },
+{ MODKEY|ControlMask,   XK_u,           kscrollup,      {.i = -1} },
+{ MODKEY|ControlMask,   XK_e,           kscrolldown,    {.i = -1} },
+
+
+
+git clone https://git.suckless.org/dmenu
+cd dmenu
+vi dmenu_run
+在dmenu_path | dmenu "$@" | ${SHELL:-"/bin/sh"} &前面添加 export LANG=C
+
+# ~/.xinitrc文件本来是没有的，需要手动添加
+vi ~/.xinitrc
+
+cvt 3000 2000 60
+# 在.xinitrc文件中添加以下代码
+xrandr --newmode "3000x2000_60.00"  514.00  3000 3240 3568 4136  2000 2003 2013 2072 -hsync +vsync
+xrandr --addmode Virtual-1 "3000x2000_60.00"
+xrandr --output Virtual-1 --mode "3000x2000_60.00"
+
+exec dwm
+
+
+startx
+
+每次编译安装都会根据config.def.h文件产生config.h文件。
+所以可以通过config.def.h文件配置dwm。
+每次修改源码都需要重新编译安装：
+
+rm -rf config.h && sudo make clean install
+
+
+vi /etc/profile
+# auto startx
+if [ -z "${DISPLAY}" ] && [ "${XDG_VTNR}" -eq 1 ]; then
+  exec startx
+fi
+
+sudo pacman -S python python-pip
+Writing to /home/arch/.config/pip/pip.conf
+
+
+安装linux man 手册
+http://www.kernel.org/pub/linux/docs/man-pages/
+
+tar -zxvf 
